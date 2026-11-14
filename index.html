@@ -239,7 +239,13 @@ select { appearance: none; padding-right: 2.2rem; cursor: pointer;
     <div class="grille">
       <div class="champ">
         <label for="fournisseur">Fournisseur</label>
-        <select id="fournisseur"></select>
+        <select id="fournisseur">
+          <option value="chatgpt">ChatGPT (OpenAI)</option>
+          <option value="claude">Claude (Anthropic)</option>
+          <option value="gemini">Gemini (Google)</option>
+          <option value="groq" selected>Groq</option>
+          <option value="autre">Autre (compatible OpenAI)</option>
+        </select>
       </div>
       <div class="champ">
         <label for="modele">Modèle <span class="facultatif">(facultatif)</span></label>
@@ -333,6 +339,7 @@ select { appearance: none; padding-right: 2.2rem; cursor: pointer;
   </div>
 </footer>
 
+<p id="alerte-script" class="aide erreur" style="max-width:60rem;margin:1rem auto;padding:0 1rem">Le programme de la page n'est pas chargé. Ouvrez la page par son adresse GitHub Pages (https://…github.io/…), pas en double-cliquant sur le fichier, et vérifiez que app.js est bien dans le dépôt.</p>
 <script type="module" src="app.js"></script>
 </body>
 </html>
