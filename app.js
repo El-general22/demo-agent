@@ -1,6 +1,8 @@
 // Agent conversationnel : chaque utilisateur apporte sa clé API et son fournisseur.
 // La clé n'est JAMAIS écrite dans un fichier : elle reste dans le navigateur de l'utilisateur.
-import { firebaseConfig } from "./firebase-config.js";
+// firebase-config.js est facultatif : s'il manque ou est cassé, l'agent fonctionne quand même
+let firebaseConfig = null;
+try { firebaseConfig = (await import("./firebase-config.js")).firebaseConfig; } catch { /* Firestore désactivé */ }
 
 const FIREBASE_VERSION = "12.0.0"; // à aligner avec la version affichée par la console Firebase
 const SDK = "https://www.gstatic.com/firebasejs/" + FIREBASE_VERSION + "/";
