@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent conversationnel · démo</title>
+  <meta name="description" content="Discutez avec un modèle de langage en apportant votre propre clé API.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
+  <style>
+/* ===========================================================
+   Agent conversationnel : mise en forme
+   Jetons repris du design system (colors_and_type.css) :
+   bleu marine, accent rouge réservé à l'action principale,
+   Montserrat, angles quasi droits, filets fins, ombres discrètes.
+   =========================================================== */
+:root {
+  --bleu: #1B3F8B;
+  --bleu-fonce: #122E66;
+  --bleu-clair: #4564B0;
+  --bleu-pale: #E6ECF7;
+  --encre: #0A1F4D;
+  --rouge: #E30613;
+  --rouge-fonce: #B30410;
+  --rouge-pale: #FCE3E5;
+  --jaune-pale: #FBF1DA;
+  --jaune: #E0A23A;
+
+  --texte: #1A1A1A;
+  --texte-2: #2B2B2B;
+  --texte-3: #555E6B;
+  --pierre-300: #C4C9D2;
+  --pierre-200: #DDE1E8;
+  --pierre-100: #EEF1F5;
+  --pierre-50: #F6F8FB;
+
+  --police: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --r2: 2px; --r4: 4px; --r8: 8px; --pilule: 999px;
+  --ombre-1: 0 1px 0 rgba(10, 31, 77, .06);
+  --ombre-2: 0 1px 2px rgba(10, 31, 77, .06), 0 2px 8px rgba(10, 31, 77, .06);
+  --ombre-4: 0 18px 40px rgba(10, 31, 77, .14), 0 4px 12px rgba(10, 31, 77, .08);
+
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --rapide: 120ms; --base: 200ms;
+  --gouttiere: clamp(16px, 2.4vw, 32px);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; font-family: var(--police); font-size: 1rem; line-height: 1.55;
+  color: var(--texte); background: var(--pierre-50);
+  -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+.conteneur { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 var(--gouttiere); }
+.cache { position: absolute; left: -9999px; }
+.icone { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.lien-evitement { position: absolute; left: -9999px; top: 0; background: var(--bleu); color: #fff; padding: .75rem 1rem; z-index: 20; }
+.lien-evitement:focus { left: 0; }
+
+/* ---- Barre ---- */
+.barre { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid var(--pierre-200); border-top: 3px solid var(--bleu); }
+.barre-interieur { display: flex; align-items: center; justify-content: space-between; min-height: 56px; }
+.barre-titre { font-weight: 700; color: var(--encre); letter-spacing: -.005em; }
+.barre-etat { display: inline-flex; align-items: center; gap: .5rem; font-size: .8125rem; font-weight: 500; color: var(--texte-3); }
+.barre-etat::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--pierre-300); }
+.barre-etat.connecte { color: var(--encre); }
+.barre-etat.connecte::before { background: #6FAE3A; }
+
+/* ---- Bandeau d'introduction ---- */
+.hero { background: var(--encre); color: #fff; padding: 3rem 0 2.5rem; }
+.hero .surtitre { color: #fff; opacity: .85; }
+.hero .surtitre::before { background: var(--rouge); }
+.hero h1 { margin: .5rem 0 1rem; font-size: clamp(1.6rem, 4vw, 2.25rem); line-height: 1.15; letter-spacing: -.01em; font-weight: 700; }
+.chapeau { margin: 0 0 1.5rem; font-size: 1.0625rem; line-height: 1.55; color: var(--pierre-200); max-width: 60ch; }
+.garanties { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; }
+.garanties li { display: inline-flex; align-items: center; gap: .5rem; font-size: .875rem; font-weight: 500; color: var(--pierre-100); }
+.garanties .icone { color: #fff; }
+
+/* ---- Surtitre (eyebrow) et titres ---- */
+.surtitre { margin: 0; font-size: .75rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--bleu); display: flex; align-items: center; gap: .6rem; }
+.surtitre::before { content: ""; width: 24px; height: 3px; background: var(--bleu); }
+h2 { margin: .35rem 0 1.25rem; font-size: 1.25rem; font-weight: 700; line-height: 1.25; color: var(--encre); text-transform: uppercase; letter-spacing: -.005em; }
+h3 { margin: 1.5rem 0 .5rem; font-size: 1rem; font-weight: 600; color: var(--encre); }
+
+/* ---- Cartes ---- */
+main.conteneur { padding-top: 1.5rem; padding-bottom: 2rem; }
+.carte { background: #fff; border: 1px solid var(--pierre-200); border-radius: var(--r2); padding: 1.75rem var(--gouttiere); margin-bottom: 1.25rem; box-shadow: var(--ombre-1); }
+
+/* ---- Formulaires ---- */
+.grille { display: grid; gap: 0 1rem; grid-template-columns: 1fr 1fr; }
+.champ { margin-bottom: 1rem; }
+label { display: block; margin-bottom: .35rem; font-size: .8125rem; font-weight: 600; color: var(--texte-2); }
+input[type="text"], input[type="password"], input[type="url"], select, textarea {
+  width: 100%; padding: .65rem .8rem; font: inherit; font-size: .9375rem; color: var(--texte);
+  background: #fff; border: 1px solid var(--pierre-300); border-radius: var(--r4);
+  transition: border-color var(--rapide) var(--ease), box-shadow var(--rapide) var(--ease);
+}
+input::placeholder, textarea::placeholder { color: var(--texte-3); opacity: .85; }
+textarea { resize: vertical; line-height: 1.5; }
+input:hover, select:hover, textarea:hover { border-color: var(--bleu-clair); }
+:focus-visible { outline: 2px solid var(--bleu); outline-offset: 2px; }
+input:focus, select:focus, textarea:focus { border-color: var(--bleu); }
+select { appearance: none; padding-right: 2.2rem; cursor: pointer;
+  background: #fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231B3F8B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>") no-repeat right .7rem center; }
+.aide { margin: .25rem 0 0; font-size: .8125rem; font-weight: 500; color: var(--texte-3); }
+.facultatif { font-weight: 500; color: var(--texte-3); }
+.aide a { color: var(--bleu); font-weight: 600; }
+.aide a:hover { text-decoration: underline; }
+.aide.erreur { color: var(--rouge-fonce); font-weight: 600; }
+.coche { display: flex; gap: .6rem; align-items: flex-start; margin: .25rem 0 0; font-size: .875rem; font-weight: 500; color: var(--texte); cursor: pointer; }
+.coche input { width: 18px; height: 18px; margin: .15rem 0 0; accent-color: var(--bleu); flex: none; }
+
+/* ---- Boutons ---- */
+.actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.25rem; }
+.bouton { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; font: inherit; font-size: .9375rem; font-weight: 700; cursor: pointer; padding: .7rem 1.25rem; border-radius: var(--r4); border: 1px solid transparent;
+  transition: background var(--rapide) var(--ease), color var(--rapide) var(--ease), border-color var(--rapide) var(--ease); }
+.bouton.principal { background: var(--rouge); color: #fff; }
+.bouton.principal:hover { background: var(--rouge-fonce); }
+.bouton.secondaire { background: #fff; color: var(--bleu); border-color: var(--bleu); }
+.bouton.secondaire:hover { background: var(--bleu-pale); }
+.bouton.petit { padding: .45rem .8rem; font-size: .8125rem; }
+.bouton:active { transform: translateY(1px); }
+.bouton:disabled { opacity: .4; pointer-events: none; }
+
+/* ---- Conversation ---- */
+.entete-chat { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem 1rem; }
+.entete-chat h2 { margin-bottom: 1rem; }
+.entete-droite { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.pastille { display: inline-block; padding: .25rem .7rem; font-size: .75rem; font-weight: 600; color: var(--bleu); background: var(--bleu-pale); border-radius: var(--pilule); }
+
+.role { margin: 0 0 1rem; border: 1px solid var(--pierre-200); border-radius: var(--r2); background: var(--pierre-50); }
+.role summary { display: flex; align-items: center; justify-content: space-between; padding: .7rem .9rem; font-size: .875rem; font-weight: 600; color: var(--encre); cursor: pointer; list-style: none; }
+.role summary::-webkit-details-marker { display: none; }
+.role summary:hover { color: var(--bleu); }
+.chevron { transition: transform var(--base) var(--ease); }
+.role[open] .chevron { transform: rotate(180deg); }
+.role > .aide, .role > textarea { margin: 0 .9rem .9rem; width: calc(100% - 1.8rem); }
+.role > .aide { margin-bottom: .5rem; }
+
+.vide { text-align: left; padding: 1rem 0 .5rem; border-top: 1px solid var(--pierre-200); }
+.vide-titre { margin: 0; font-weight: 700; color: var(--encre); }
+.suggestions { display: flex; flex-direction: column; gap: .5rem; margin-top: .75rem; }
+.suggestion { text-align: left; font: inherit; font-size: .875rem; font-weight: 500; color: var(--texte); background: #fff; padding: .65rem .9rem; border: 1px solid var(--pierre-300); border-left: 3px solid var(--bleu); border-radius: var(--r2); cursor: pointer;
+  transition: background var(--rapide) var(--ease), border-color var(--rapide) var(--ease); }
+.suggestion:hover { background: var(--bleu-pale); border-left-color: var(--rouge); }
+
+#fil { display: flex; flex-direction: column; gap: .9rem; max-height: 55vh; overflow-y: auto; padding: .5rem 0 1rem; scroll-behavior: smooth; }
+#fil:empty { display: none; }
+.bulle { max-width: 88%; padding: .7rem 1rem; font-size: .9375rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: var(--r4);
+  animation: apparition var(--base) var(--ease); }
+.bulle[data-auteur]::before { content: attr(data-auteur); display: block; margin-bottom: .2rem; font-size: .6875rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.bulle.utilisateur { align-self: flex-end; background: var(--bleu); color: #fff; }
+.bulle.assistant { align-self: flex-start; background: #fff; color: var(--texte); border: 1px solid var(--pierre-200); border-left: 3px solid var(--bleu); }
+.bulle.erreur { align-self: flex-start; background: var(--rouge-pale); color: #7A1C15; border-left: 3px solid var(--rouge); font-weight: 500; }
+.bulle.attente { align-self: flex-start; background: var(--pierre-100); color: var(--texte-3); font-weight: 500; }
+.bulle.attente::after { content: ""; display: inline-block; width: 1.2em; margin-left: .15em; animation: points 1.2s steps(4, end) infinite; overflow: hidden; vertical-align: bottom; }
+@keyframes points { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+@keyframes apparition { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.saisie { border-top: 1px solid var(--pierre-200); padding-top: 1rem; }
+.saisie .actions { margin-top: .75rem; }
+
+/* ---- Bloc Firestore ---- */
+.alerte { display: flex; gap: .6rem; align-items: flex-start; margin: 1rem 0 0; padding: .7rem .9rem; font-size: .8125rem; font-weight: 500; color: var(--texte); background: var(--jaune-pale); border-left: 3px solid var(--jaune); border-radius: var(--r2); }
+.alerte .icone { margin-top: .1rem; }
+#historique { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--pierre-200); }
+#historique li { padding: .6rem 0; font-size: .875rem; border-bottom: 1px solid var(--pierre-200); overflow-wrap: anywhere; }
+
+/* ---- Pied de page ---- */
+.pied { background: var(--encre); color: var(--pierre-200); padding: 1.75rem 0; border-top: 3px solid var(--bleu); font-size: .8125rem; }
+.pied p { margin: 0; }
+
+@media (max-width: 560px) {
+  .grille { grid-template-columns: 1fr; }
+  .bulle { max-width: 96%; }
+  .actions .bouton { flex: 1 1 100%; }
+  .hero { padding: 2rem 0 1.75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+  </style>
+</head>
+<body>
+
+<!-- Définition des icônes (traits de 1,5 px, extrémités arrondies) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-cle" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+    <symbol id="i-bouclier" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+    <symbol id="i-envoi" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-reglage" viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+    <symbol id="i-corbeille" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+    <symbol id="i-base" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  </defs>
+</svg>
+
+<a class="lien-evitement" href="#contenu">Aller au contenu</a>
+
+<!-- Barre de navigation -->
+<header class="barre">
+  <div class="conteneur barre-interieur">
+    <span class="barre-titre">Agent conversationnel</span>
+    <span class="barre-etat" id="etat-barre">Non connecté</span>
+  </div>
+</header>
+
+<!-- Bandeau d'introduction -->
+<section class="hero">
+  <div class="conteneur">
+    <p class="surtitre">Démonstration</p>
+    <h1>Discutez avec votre agent, avec votre propre clé</h1>
+    <p class="chapeau">Choisissez votre fournisseur d'IA, saisissez votre clé API, puis conversez. La clé reste dans votre navigateur et n'est transmise qu'à votre fournisseur.</p>
+    <ul class="garanties">
+      <li><svg class="icone" width="18" height="18" aria-hidden="true"><use href="#i-bouclier"/></svg><span>Aucune clé dans le code ni sur GitHub</span></li>
+      <li><svg class="icone" width="18" height="18" aria-hidden="true"><use href="#i-globe"/></svg><span>Vous choisissez votre fournisseur</span></li>
+      <li><svg class="icone" width="18" height="18" aria-hidden="true"><use href="#i-cle"/></svg><span>Effaçable en un clic</span></li>
+    </ul>
+  </div>
+</section>
+
+<main id="contenu" class="conteneur">
+
+  <!-- ÉTAPE 1 : connexion au fournisseur d'IA -->
+  <section id="config" class="carte" aria-labelledby="titre-config">
+    <p class="surtitre">Étape 1</p>
+    <h2 id="titre-config">Connexion à votre fournisseur</h2>
+
+    <div class="grille">
+      <div class="champ">
+        <label for="fournisseur">Fournisseur</label>
+        <select id="fournisseur"></select>
+      </div>
+      <div class="champ">
+        <label for="modele">Modèle <span class="facultatif">(facultatif)</span></label>
+        <input id="modele" type="text" autocomplete="off" spellcheck="false" placeholder="Laisser vide : choix automatique">
+      </div>
+    </div>
+    <p id="note-fournisseur" class="aide"></p>
+
+    <div id="bloc-url" class="champ" hidden>
+      <label for="url">Adresse de l'API (compatible OpenAI, en https)</label>
+      <input id="url" type="url" placeholder="https://exemple.com/v1/chat/completions" autocomplete="off">
+    </div>
+
+    <div class="champ">
+      <label for="cle">Clé API</label>
+      <input id="cle" type="password" autocomplete="off" spellcheck="false" placeholder="Collez votre clé ici">
+    </div>
+
+    <label class="coche">
+      <input type="checkbox" id="memoriser" checked>
+      <span>Mémoriser la clé sur cet ordinateur <span class="aide">(à décocher sur un poste partagé)</span></span>
+    </label>
+
+    <div class="actions">
+      <button id="btn-connecter" type="button" class="bouton principal">Se connecter</button>
+      <button id="btn-oublier" type="button" class="bouton secondaire"><svg class="icone" width="18" height="18" aria-hidden="true"><use href="#i-corbeille"/></svg>Oublier ma clé</button>
+    </div>
+    <p id="statut" role="status" class="aide"></p>
+  </section>
+
+  <!-- ÉTAPE 2 : la conversation -->
+  <section id="chat" class="carte" aria-labelledby="titre-chat" hidden>
+    <div class="entete-chat">
+      <div>
+        <p class="surtitre">Étape 2</p>
+        <h2 id="titre-chat">Conversation</h2>
+      </div>
+      <div class="entete-droite">
+        <span id="resume-connexion" class="pastille"></span>
+        <button id="btn-modifier" type="button" class="bouton secondaire petit"><svg class="icone" width="18" height="18" aria-hidden="true"><use href="#i-reglage"/></svg>Modifier la connexion</button>
+      </div>
+    </div>
+
+    <details class="role">
+      <summary><span>Rôle de l'agent (message système)</span><svg class="icone chevron" width="18" height="18" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+      <p class="aide">Cette consigne est envoyée au modèle avec chaque échange. Modifiez-la pour changer son comportement.</p>
+      <textarea id="role" rows="3"></textarea>
+    </details>
+
+    <div id="vide" class="vide">
+      <p class="vide-titre">Posez votre première question</p>
+      <p class="aide">Ou choisissez une suggestion :</p>
+      <div class="suggestions">
+        <button type="button" class="suggestion">Explique-moi ce qu'est une API en trois phrases</button>
+        <button type="button" class="suggestion">Propose-moi trois idées de projet pour un hackathon</button>
+        <button type="button" class="suggestion">Résume en trois points : la clé API est un badge personnel</button>
+      </div>
+    </div>
+
+    <div id="fil" aria-live="polite"></div>
+
+    <form id="formulaire" class="saisie">
+      <label for="question" class="cache">Votre message</label>
+      <textarea id="question" rows="2" placeholder="Écrivez votre message. Entrée pour envoyer, Maj+Entrée pour passer à la ligne."></textarea>
+      <div class="actions">
+        <button id="btn-envoyer" type="submit" class="bouton principal"><svg class="icone" width="18" height="18" aria-hidden="true"><use href="#i-envoi"/></svg>Envoyer</button>
+        <button id="btn-nouvelle" type="button" class="bouton secondaire"><svg class="icone" width="18" height="18" aria-hidden="true"><use href="#i-reset"/></svg>Nouvelle conversation</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Bloc Firebase : visible seulement si firebase-config.js est rempli -->
+  <section id="bloc-firestore" class="carte" aria-labelledby="titre-memoire" hidden>
+    <p class="surtitre">Option</p>
+    <h2 id="titre-memoire">Mémoire de la démonstration</h2>
+    <label class="coche">
+      <input type="checkbox" id="sauvegarde">
+      <span>Enregistrer mes échanges dans Firestore</span>
+    </label>
+    <p class="alerte"><svg class="icone" width="18" height="18" aria-hidden="true"><use href="#i-base"/></svg><span>Les règles de la démo rendent l'historique lisible par tous. Utilisez des données fictives uniquement.</span></p>
+    <div id="historique-zone" hidden>
+      <h3>Derniers échanges enregistrés</h3>
+      <ul id="historique"></ul>
+    </div>
+  </section>
+</main>
+
+<footer class="pied">
+  <div class="conteneur">
+    <p>Démonstration pédagogique. N'envoyez aucune donnée personnelle ou confidentielle à un modèle de langage.</p>
+  </div>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
