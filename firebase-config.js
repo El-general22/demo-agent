@@ -1,4 +1,3 @@
-ebase config · JS
 // Configuration Firebase : PUBLIQUE par conception, elle peut être sur GitHub.
 // Tant que les valeurs ci-dessous commencent par « COLLER » ou « VOTRE »,
 // l'application fonctionne normalement mais sans Firestore.
