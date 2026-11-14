@@ -78,6 +78,8 @@ function oublierCle() { retirer(localStorage, "agent_cle"); retirer(sessionStora
 let historique = []; // messages {role, content} de la conversation en cours
 
 function remplirFournisseurs() {
+  const alerte = document.getElementById("alerte-script"); if (alerte) alerte.remove();
+  el("fournisseur").replaceChildren();
   Object.entries(FOURNISSEURS).forEach(([id, f]) => {
     const o = document.createElement("option");
     o.value = id; o.textContent = f.nom;
